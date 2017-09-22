@@ -1,6 +1,8 @@
 package com.werb.mediautilsdemo;
 
 import android.app.Activity;
+import android.content.Context;
+import android.content.res.Configuration;
 import android.graphics.Bitmap;
 import android.hardware.Camera;
 import android.media.CamcorderProfile;
@@ -9,6 +11,7 @@ import android.media.MediaRecorder;
 import android.util.Log;
 import android.view.GestureDetector;
 import android.view.MotionEvent;
+import android.view.Surface;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.view.View;
@@ -145,9 +148,9 @@ public class MediaUtils implements SurfaceHolder.Callback {
                 mMediaRecorder.setVideoSource(MediaRecorder.VideoSource.CAMERA);
                 mMediaRecorder.setProfile(profile);
                 // 实际视屏录制后的方向
-                if(cameraPosition == 0){
+                if (cameraPosition == 0) {
                     mMediaRecorder.setOrientationHint(270);
-                }else {
+                } else {
                     mMediaRecorder.setOrientationHint(or);
                 }
 
@@ -221,7 +224,8 @@ public class MediaUtils implements SurfaceHolder.Callback {
             mCamera = Camera.open(Camera.CameraInfo.CAMERA_FACING_BACK);
         }
         if (mCamera != null) {
-            mCamera.setDisplayOrientation(or);
+//            mCamera.setDisplayOrientation(or);
+            setCameraDisplayOrientation(activity, cameraPosition, mCamera);
             try {
                 mCamera.setPreviewDisplay(holder);
                 Camera.Parameters parameters = mCamera.getParameters();
@@ -241,12 +245,13 @@ public class MediaUtils implements SurfaceHolder.Callback {
                 profile.videoFrameWidth = optimalSize.width;
                 profile.videoFrameHeight = optimalSize.height;
                 // 这样设置 1080p的视频 大小在5M , 可根据自己需求调节
-                profile.videoBitRate = 2 * optimalSize.width * optimalSize.height;
+                profile.videoBitRate = 5 * optimalSize.width * optimalSize.height;
                 List<String> focusModes = parameters.getSupportedFocusModes();
                 if (focusModes != null) {
                     for (String mode : focusModes) {
-                        mode.contains("continuous-video");
-                        parameters.setFocusMode("continuous-video");
+                        if (mode.contains("continuous-video")) {
+                            parameters.setFocusMode("continuous-video");
+                        }
                     }
                 }
                 mCamera.setParameters(parameters);
@@ -403,4 +408,46 @@ public class MediaUtils implements SurfaceHolder.Callback {
         }
     }
 
+    /**
+     * 返回当前屏幕是否为竖屏。
+     *
+     * @param context
+     * @return 当且仅当当前屏幕为竖屏时返回true, 否则返回false。
+     */
+    public static boolean isScreenOriatationPortrait(Context context) {
+        return context.getResources().getConfiguration().orientation == Configuration.ORIENTATION_PORTRAIT;
+    }
+
+    public static void setCameraDisplayOrientation(Activity activity,
+                                                   int cameraId, android.hardware.Camera camera) {
+        android.hardware.Camera.CameraInfo info =
+                new android.hardware.Camera.CameraInfo();
+        android.hardware.Camera.getCameraInfo(cameraId, info);
+        int rotation = activity.getWindowManager().getDefaultDisplay()
+                .getRotation();
+        int degrees = 0;
+        Log.e(TAG, "setCameraDisplayOrientation: " + rotation);//逆时针旋转角度
+        switch (rotation) {
+            case Surface.ROTATION_0:
+                degrees = 0;
+                break;
+            case Surface.ROTATION_90:
+                degrees = 90;
+                break;
+            case Surface.ROTATION_180:
+                degrees = 180;
+                break;
+            case Surface.ROTATION_270:
+                degrees = 270;
+                break;
+        }
+        int result;
+        if (info.facing == Camera.CameraInfo.CAMERA_FACING_FRONT) {
+            result = (info.orientation + degrees) % 360;
+            result = (360 - result) % 360;  // compensate the mirror
+        } else {  // back-facing
+            result = (info.orientation - degrees + 360) % 360;
+        }
+        camera.setDisplayOrientation(result);
+    }
 }

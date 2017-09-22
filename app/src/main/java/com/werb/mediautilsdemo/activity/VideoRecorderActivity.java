@@ -2,6 +2,7 @@ package com.werb.mediautilsdemo.activity;
 
 import android.animation.AnimatorSet;
 import android.animation.ObjectAnimator;
+import android.content.res.Configuration;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
@@ -227,5 +228,4 @@ public class VideoRecorderActivity extends AppCompatActivity {
             recordLayout.setVisibility(View.VISIBLE);
         }
     };
-
 }
